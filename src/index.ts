@@ -4,6 +4,7 @@ import { loadOpenAIAuth } from "./auth"
 import { callViaCodexResponses } from "./codex"
 import { readReferenceImages } from "./input-image"
 import { saveGeneratedImage } from "./output-image"
+import { IMAGE_SIZES, type ImageSize, parseImageSize, SIZE_CHOICES } from "./size"
 
 const GptImagePlugin: Plugin = async (_input: PluginInput): Promise<Hooks> => {
   return {
@@ -27,10 +28,12 @@ const GptImagePlugin: Plugin = async (_input: PluginInput): Promise<Hooks> => {
             .enum(["low", "medium", "high", "auto"])
             .describe("Generation quality passed to the hosted image_generation tool."),
           size: tool.schema
-            .string()
-            .optional()
+            .enum(Object.keys(IMAGE_SIZES) as [ImageSize, ...ImageSize[]])
             .describe(
-              "Optional image size passed to the hosted image_generation tool. Use `auto` or `WIDTHxHEIGHT`; width and height must be multiples of 16px, max edge <= 3840px, long-to-short ratio <= 3:1, and total pixels between 655,360 and 8,294,400.",
+              [
+                `Output size. Only these sizes can be generated: ${SIZE_CHOICES}.`,
+                "Typical choices: 1672x941 for a 16:9 video thumbnail, 1254x1254 for a square icon, 941x1672 for a phone wallpaper.",
+              ].join(" "),
             ),
           images: tool.schema
             .array(tool.schema.string())
@@ -38,13 +41,14 @@ const GptImagePlugin: Plugin = async (_input: PluginInput): Promise<Hooks> => {
             .describe("Optional reference image paths, relative to the project directory unless absolute."),
         },
         async execute(args, ctx) {
+          const size = parseImageSize(args.size)
           const auth = await loadOpenAIAuth()
           if (!auth) {
             throw new Error("OpenAI ChatGPT OAuth credentials not configured.")
           }
 
           const inputImageDataUrls = await readReferenceImages(args.images, ctx.directory)
-          const base64 = await callViaCodexResponses(auth, args, inputImageDataUrls)
+          const base64 = await callViaCodexResponses(auth, { ...args, size }, inputImageDataUrls)
 
           const { savedPath, versioned, message } = await saveGeneratedImage(args.out, ctx.directory, base64)
 
