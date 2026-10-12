@@ -27,14 +27,13 @@ afterEach(async () => {
   await rm(dir, { recursive: true, force: true })
 })
 
-function imageDoneEvent(result: string): string {
-  const event = { type: "response.output_item.done", item: { type: "image_generation_call", result } }
-  return `data: ${JSON.stringify(event)}\n\n`
+function imagesResponse(b64Json: string): Response {
+  return new Response(JSON.stringify({ created: 0, data: [{ b64_json: b64Json }] }))
 }
 
 describe("gpt_imagegen execute", () => {
   test("saves the generated image under the context directory and reports it", async () => {
-    const fetchMock = mock(async (_url: string, _init: RequestInit) => new Response(imageDoneEvent(PNG_BASE64)))
+    const fetchMock = mock(async (_url: string, _init: RequestInit) => imagesResponse(PNG_BASE64))
     globalThis.fetch = fetchMock as unknown as typeof fetch
     const hooks = await plugin.server({} as PluginInput)
     const ctx = { directory: dir } as ToolContext
@@ -51,7 +50,9 @@ describe("gpt_imagegen execute", () => {
       metadata: { out: savedPath, versioned: false, billing: "subscription" },
     })
     const [, init] = fetchMock.mock.calls[0]
-    expect(JSON.parse(init.body as string).tools[0].size).toBe(size)
+    expect(JSON.parse(init.body as string).prompt).toBe(
+      "a cat Generate the image with a width of 1672 pixels and a height of 941 pixels (16:9 aspect ratio).",
+    )
   })
 
   test("rejects an unsupported size without calling the backend", async () => {
