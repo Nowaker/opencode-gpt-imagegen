@@ -44,7 +44,7 @@ describe("gpt_imagegen execute", () => {
 
     const savedPath = path.join(dir, out)
     expect(await readFile(savedPath)).toEqual(PNG_BUFFER)
-    // PNG_BASE64 is a 1x1 image.
+    // PNG_BASE64 is a 1x1 image. The message reports the size of the saved image, not the requested size.
     expect(result).toEqual({
       output: `Generated image saved to ${savedPath}. The image is 1x1 pixels.`,
       metadata: { out: savedPath, versioned: false, billing: "subscription" },
