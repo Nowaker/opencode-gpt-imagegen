@@ -12,9 +12,9 @@ async function readImageAsDataUrl(filePath: string, ctxDir: string): Promise<str
   return `data:${detected.mime};base64,${buf.toString("base64")}`
 }
 
-// Read the optional reference image paths and encode them as data URLs the Codex
-// backend accepts as input_image content. Paths resolve relative to the OpenCode
-// context directory unless absolute.
+// Read the optional reference image paths and encode them as data URLs, which the
+// Codex images edits endpoint accepts as `images[].image_url`. Paths resolve relative
+// to the OpenCode context directory unless absolute.
 export async function readReferenceImages(paths: string[] | undefined, ctxDir: string): Promise<string[]> {
   return Promise.all((paths ?? []).map((p) => readImageAsDataUrl(p, ctxDir)))
 }

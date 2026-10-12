@@ -1,7 +1,7 @@
 import type { Hooks, Plugin, PluginInput, PluginModule } from "@opencode-ai/plugin"
 import { tool } from "@opencode-ai/plugin"
 import { loadOpenAIAuth } from "./auth"
-import { callViaCodexResponses } from "./codex"
+import { callViaCodexImages } from "./codex"
 import { readReferenceImages } from "./input-image"
 import { saveGeneratedImage } from "./output-image"
 import { IMAGE_SIZES, type ImageSize, parseImageSize, SIZE_CHOICES } from "./size"
@@ -11,7 +11,7 @@ const GptImagePlugin: Plugin = async (_input: PluginInput): Promise<Hooks> => {
     tool: {
       gpt_imagegen: tool({
         description: [
-          "Generate raster images using OpenAI's hosted image_generation tool.",
+          "Generate raster images through the image generation endpoints of the ChatGPT Codex backend.",
           "Use for AI-created bitmap visuals such as photos, illustrations, textures, sprites, and mockups.",
           "Do not use when the task is better handled by editing existing SVG/vector/code-native assets, extending an established icon or logo system, or building the visual directly in HTML/CSS/canvas.",
           "Reference images may be attached through `images`; label each image's role inline in `prompt`, for example: 'Image 1: reference image'.",
@@ -54,7 +54,7 @@ const GptImagePlugin: Plugin = async (_input: PluginInput): Promise<Hooks> => {
           }
 
           const inputImageDataUrls = await readReferenceImages(args.images, ctx.directory)
-          const base64 = await callViaCodexResponses(auth, { ...args, size }, inputImageDataUrls)
+          const base64 = await callViaCodexImages(auth, { ...args, size }, inputImageDataUrls)
 
           const { savedPath, versioned, message } = await saveGeneratedImage(args.out, ctx.directory, base64)
 

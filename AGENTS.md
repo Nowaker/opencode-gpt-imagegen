@@ -9,14 +9,14 @@ When you open a pull request, including one for the maintainer, write its descri
 ## Project Shape
 
 - Bun is the package manager/runtime; use `bun install --frozen-lockfile` with the committed `bun.lock`.
-- The plugin entry is `src/index.ts` (plugin wiring + tool schema); helpers live in role-based modules — `src/types.ts` (shared types), `src/auth.ts` (auth resolution), `src/size.ts` (supported output sizes + prompt size hint), `src/input-image.ts` (reference image reading), `src/output-image.ts` (non-overwriting save + message), `src/codex.ts` (Codex backend call + SSE parsing).
+- The plugin entry is `src/index.ts` (plugin wiring + tool schema); helpers live in role-based modules — `src/types.ts` (shared types), `src/auth.ts` (auth resolution), `src/size.ts` (supported output sizes + prompt size hint), `src/input-image.ts` (reference image reading), `src/output-image.ts` (non-overwriting save + message), `src/codex.ts` (Codex Images endpoint call).
 - `bun run build` bundles `src` into a single self-contained `dist/index.js` via `bun build --target node --format esm --packages external` (dependencies, including the `@opencode-ai/plugin` peer dep, stay external). Bundling avoids the extensionless relative imports `tsc` would emit, which native Node ESM cannot resolve. No `.d.ts` is published — the plugin is loaded by OpenCode at runtime, not imported as a typed library.
 - `dist/` is ignored locally but is the publish artifact (just `index.js`). Run `bun run build` before inspecting package output.
 - `bunfig.toml` enforces `install.minimumReleaseAge = 604800` (1 week): newly published versions are filtered out by `bun install` / `bun add` / `bun outdated`.
 
 ## Commands
 
-- Tests are split by kind: `tests/unit/` (helper-module unit tests) and `tests/e2e/` (one file per auth path, e.g. `subscription.test.ts`).
+- Tests are split by kind: `tests/unit/` (unit tests of the `src/` modules, including the plugin entry) and `tests/e2e/` (one file per auth path, e.g. `subscription.test.ts`).
 - `bun run typecheck` runs `tsc --noEmit` over `src` and `tests`.
 - `bunx biome ci .` is the CI formatter/linter check.
 - `bun run check` runs `biome check --write .`; it may modify files.
@@ -33,7 +33,7 @@ When you open a pull request, including one for the maintainer, write its descri
 
 ## Implementation Notes
 
-- The exposed tool is `gpt_imagegen`; it calls the ChatGPT Codex responses endpoint with the hosted `image_generation` tool.
+- The exposed tool is `gpt_imagegen`; it calls the ChatGPT Codex Images endpoints, `images/generations`, or `images/edits` when reference images are given.
 - Output paths are resolved relative to the OpenCode context directory unless absolute, and existing files are never overwritten; suffixes `-v2` through `-v999` are tried.
 - Reference images are read from paths relative to the OpenCode context directory and are embedded as data URLs after MIME detection.
 

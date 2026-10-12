@@ -1,92 +1,49 @@
-import { EventSourceParserStream } from "eventsource-parser/stream"
 import { appendSizeToPrompt } from "./size"
 import type { GenerateArgs, OpenAIAuth } from "./types"
 
-// Codex OAuth responses endpoint URL.
-// https://github.com/openai/codex/blob/fca81eeb5bab4cad997622a359d446e6489c445b/codex-rs/model-provider-info/src/lib.rs#L37
-// https://github.com/openai/codex/blob/fca81eeb5bab4cad997622a359d446e6489c445b/codex-rs/core/src/client.rs#L146
-const CODEX_RESPONSES_ENDPOINT = "https://chatgpt.com/backend-api/codex/responses"
+// Codex OAuth images endpoint URLs. Codex calls edits when reference images are given.
+// https://github.com/openai/codex/blob/a4ebc509f4cdff88a8e58e175541970a30a2d385/codex-rs/model-provider-info/src/lib.rs#L80
+// https://github.com/openai/codex/blob/a4ebc509f4cdff88a8e58e175541970a30a2d385/codex-rs/codex-api/src/endpoint/images.rs#L62-L83
+const CODEX_IMAGES_GENERATIONS_ENDPOINT = "https://chatgpt.com/backend-api/codex/images/generations"
+const CODEX_IMAGES_EDITS_ENDPOINT = "https://chatgpt.com/backend-api/codex/images/edits"
 
-// Codex model slug used for the hosted image_generation turn.
-// https://github.com/openai/codex/blob/fca81eeb5bab4cad997622a359d446e6489c445b/codex-rs/models-manager/models.json#L24
-const SUBSCRIPTION_MODEL = "gpt-6-sol"
+// Same body as Codex. The backend appears to ignore model, quality, and size, and honors only background.
+// https://github.com/openai/codex/blob/a4ebc509f4cdff88a8e58e175541970a30a2d385/codex-rs/ext/image-generation/src/tool.rs#L414-L440
+// https://github.com/yuji-hatakeyama/opencode-gpt-imagegen/issues/107#issuecomment-6020014602
+const CODEX_REQUEST_DEFAULTS = { background: "opaque", model: "gpt-image-2", quality: "auto", size: "auto" }
 
-type CodexSSEEvent = {
-  type?: string
-  item?: { type?: string; result?: string }
-}
+type CodexImagesResponse = { data?: Array<{ b64_json?: string }> }
 
-export async function parseImageGenerationResultFromSSE(stream: ReadableStream<Uint8Array>): Promise<string> {
-  const events = (stream as unknown as ReadableStream<BufferSource>)
-    .pipeThrough(new TextDecoderStream())
-    .pipeThrough(new EventSourceParserStream())
-  for await (const event of events) {
-    if (event.data === "[DONE]") continue
-    try {
-      const json = JSON.parse(event.data) as CodexSSEEvent
-      if (
-        json.type === "response.output_item.done" &&
-        json.item?.type === "image_generation_call" &&
-        typeof json.item.result === "string" &&
-        // Reject an empty result: decoding it would write a 0-byte file and report success.
-        json.item.result.length > 0
-      ) {
-        return json.item.result
-      }
-    } catch {
-      // SSE keepalive or non-JSON heartbeat
-    }
-  }
-  throw new Error("no image_generation result returned by codex backend")
-}
-
-export async function callViaCodexResponses(
+export async function callViaCodexImages(
   auth: OpenAIAuth,
   args: GenerateArgs,
   inputImageDataUrls: string[],
 ): Promise<string> {
-  const userContent: Array<Record<string, unknown>> = [
-    { type: "input_text", text: appendSizeToPrompt(args.prompt, args.size) },
-  ]
-  for (const dataUrl of inputImageDataUrls) {
-    userContent.push({ type: "input_image", image_url: dataUrl })
+  const isEdit = inputImageDataUrls.length > 0
+  const body = {
+    prompt: appendSizeToPrompt(args.prompt, args.size),
+    ...CODEX_REQUEST_DEFAULTS,
+    ...(isEdit ? { images: inputImageDataUrls.map((dataUrl) => ({ image_url: dataUrl })) } : {}),
   }
 
-  // https://github.com/openai/codex/blob/fca81eeb5bab4cad997622a359d446e6489c445b/codex-rs/core/src/client.rs#L745-L763
-  const body: Record<string, unknown> = {
-    model: SUBSCRIPTION_MODEL,
-    instructions:
-      "You are an image generation assistant running inside the Codex backend. " +
-      "Always satisfy the request by invoking the image_generation tool exactly once. " +
-      "Do not respond with text only.",
-    input: [{ role: "user", content: userContent }],
-    tools: [
-      {
-        type: "image_generation",
-        output_format: "png",
-        quality: args.quality,
-        size: args.size,
-      },
-    ],
-    tool_choice: { type: "image_generation" },
-    stream: true,
-    store: false,
-  }
-
-  const res = await fetch(CODEX_RESPONSES_ENDPOINT, {
+  const res = await fetch(isEdit ? CODEX_IMAGES_EDITS_ENDPOINT : CODEX_IMAGES_GENERATIONS_ENDPOINT, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${auth.access}`,
       ...(auth.accountId ? { "ChatGPT-Account-Id": auth.accountId } : {}),
       originator: "opencode",
-      Accept: "text/event-stream",
     },
     body: JSON.stringify(body),
   })
-  if (!res.ok || !res.body) {
+  if (!res.ok) {
     const detail = await res.text().catch(() => "")
-    throw new Error(`codex responses request failed: ${res.status} ${detail.slice(0, 500)}`)
+    throw new Error(`codex images request failed: ${res.status} ${detail.slice(0, 500)}`)
   }
-  return parseImageGenerationResultFromSSE(res.body)
+  const image = ((await res.json()) as CodexImagesResponse).data?.[0]?.b64_json
+  // Reject an empty image too: decoding it would write a 0-byte file and report success.
+  if (!image) {
+    throw new Error("no image returned by codex images endpoint")
+  }
+  return image
 }
