@@ -7,7 +7,7 @@ function imagesResponse(data: Array<{ b64_json: string }>): Response {
 }
 
 function generateArgs(overrides: Partial<GenerateArgs> = {}): GenerateArgs {
-  return { prompt: "a cat", out: "cat.png", quality: "auto", size: "1254x1254", ...overrides }
+  return { prompt: "a cat", out: "cat.png", size: "1254x1254", ...overrides }
 }
 
 describe("callViaCodexImages", () => {

@@ -30,9 +30,6 @@ const GptImagePlugin: Plugin = async (_input: PluginInput): Promise<Hooks> => {
           out: tool.schema
             .string()
             .describe("Output file path, relative to the project directory unless absolute. The plugin writes a PNG."),
-          quality: tool.schema
-            .enum(["low", "medium", "high", "auto"])
-            .describe("Generation quality passed to the hosted image_generation tool."),
           size: tool.schema
             .enum(Object.keys(IMAGE_SIZES) as [ImageSize, ...ImageSize[]])
             .describe(
