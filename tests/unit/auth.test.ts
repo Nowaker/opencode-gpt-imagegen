@@ -1,4 +1,4 @@
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "bun:test"
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, mock, test } from "bun:test"
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs"
 import os from "node:os"
 import path from "node:path"
@@ -9,7 +9,6 @@ mkdirSync(path.dirname(AUTH_FILE), { recursive: true })
 
 // Capture so this file's env edits don't leak into other test files sharing the bun test
 // process — tests/e2e.test.ts spawns opencode with ...process.env.
-const ORIGINAL_XDG_DATA_HOME = process.env.XDG_DATA_HOME
 const ORIGINAL_AUTH_CONTENT = process.env.OPENCODE_AUTH_CONTENT
 let loadOpenAIAuth: typeof import("../../src/auth").loadOpenAIAuth
 
@@ -22,14 +21,14 @@ function restoreEnv(key: string, value: string | undefined): void {
 }
 
 beforeAll(async () => {
-  // xdg-basedir captures XDG_DATA_HOME at import, so point it at the temp dir before
-  // importing the module under test (which transitively imports xdg-basedir).
-  process.env.XDG_DATA_HOME = XDG
+  // xdg-basedir reads XDG_DATA_HOME only once, when it is first imported, and another test file
+  // may import it before this one. mock.module also replaces the module for files that already
+  // imported it, so auth.json is read from the temp dir regardless of the test file order.
+  mock.module("xdg-basedir", () => ({ xdgData: XDG }))
   loadOpenAIAuth = (await import("../../src/auth")).loadOpenAIAuth
 })
 
 afterAll(() => {
-  restoreEnv("XDG_DATA_HOME", ORIGINAL_XDG_DATA_HOME)
   restoreEnv("OPENCODE_AUTH_CONTENT", ORIGINAL_AUTH_CONTENT)
 })
 
