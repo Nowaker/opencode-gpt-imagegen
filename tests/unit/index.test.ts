@@ -5,6 +5,7 @@ import path from "node:path"
 import type { PluginInput, ToolContext } from "@opencode-ai/plugin"
 import plugin from "../../src/index"
 import type { ImageSize } from "../../src/size"
+import type { GenerateArgs } from "../../src/types"
 import { PNG_BASE64, PNG_BUFFER } from "./fixtures"
 
 // Capture so this file's env edits don't leak into other test files sharing the bun test process.
@@ -32,6 +33,9 @@ function imagesResponse(b64Json: string): Response {
 }
 
 describe("gpt_imagegen execute", () => {
+  const supportedSizes =
+    "1254x1254 (1:1), 1536x1024 (3:2), 1024x1536 (2:3), 1448x1086 (4:3), 1086x1448 (3:4), 1672x941 (16:9), 941x1672 (9:16)"
+
   test("saves the generated image under the context directory and reports it", async () => {
     const fetchMock = mock(async (_url: string, _init: RequestInit) => imagesResponse(PNG_BASE64))
     globalThis.fetch = fetchMock as unknown as typeof fetch
@@ -71,7 +75,7 @@ describe("gpt_imagegen execute", () => {
     expect(JSON.parse(init.body as string).quality).toBe("auto")
   })
 
-  test("rejects an unsupported size without calling the backend", async () => {
+  test("rejects an unsupported size with the supported sizes without calling the backend", async () => {
     const fetchMock = mock(async () => new Response(""))
     globalThis.fetch = fetchMock as unknown as typeof fetch
     const hooks = await plugin.server({} as PluginInput)
@@ -81,7 +85,74 @@ describe("gpt_imagegen execute", () => {
 
     const act = hooks.tool?.gpt_imagegen?.execute({ prompt: "a cat", out: "cat.png", size }, ctx)
 
-    await expect(act).rejects.toThrow(`Unsupported size "${size}".`)
+    await expect(act).rejects.toThrow(`Unsupported size "${size}". Use one of: ${supportedSizes}.`)
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  test("rejects a missing size with the supported sizes without calling the backend", async () => {
+    const fetchMock = mock(async () => new Response(""))
+    globalThis.fetch = fetchMock as unknown as typeof fetch
+    const hooks = await plugin.server({} as PluginInput)
+    const ctx = { directory: dir } as ToolContext
+    const args = { prompt: "a cat", out: "cat.png" } as unknown as GenerateArgs
+
+    const act = hooks.tool?.gpt_imagegen?.execute(args, ctx)
+
+    await expect(act).rejects.toThrow(`Missing size. Use one of: ${supportedSizes}.`)
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  test("generates without reference images when images is null", async () => {
+    const fetchMock = mock(async (_url: string, _init: RequestInit) => imagesResponse(PNG_BASE64))
+    globalThis.fetch = fetchMock as unknown as typeof fetch
+    const hooks = await plugin.server({} as PluginInput)
+    const ctx = { directory: dir } as ToolContext
+    const out = "cat.png"
+    // Some models fill unused optional arguments with null.
+    const args = { prompt: "a cat", out, size: "1254x1254", images: null } as unknown as GenerateArgs
+
+    await hooks.tool?.gpt_imagegen?.execute(args, ctx)
+
+    expect(await readFile(path.join(dir, out))).toEqual(PNG_BUFFER)
+    const [url] = fetchMock.mock.calls[0]
+    expect(url).toBe("https://chatgpt.com/backend-api/codex/images/generations")
+  })
+
+  test("rejects more than five reference images without calling the backend", async () => {
+    const fetchMock = mock(async () => new Response(""))
+    globalThis.fetch = fetchMock as unknown as typeof fetch
+    const hooks = await plugin.server({} as PluginInput)
+    const ctx = { directory: dir } as ToolContext
+    const images = ["1.png", "2.png", "3.png", "4.png", "5.png", "6.png"]
+
+    const act = hooks.tool?.gpt_imagegen?.execute({ prompt: "a cat", out: "cat.png", size: "1254x1254", images }, ctx)
+
+    await expect(act).rejects.toThrow("at images")
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  test("reports a null size as missing", async () => {
+    const fetchMock = mock(async () => new Response(""))
+    globalThis.fetch = fetchMock as unknown as typeof fetch
+    const hooks = await plugin.server({} as PluginInput)
+    const ctx = { directory: dir } as ToolContext
+    const args = { prompt: "a cat", out: "cat.png", size: null } as unknown as GenerateArgs
+
+    const act = hooks.tool?.gpt_imagegen?.execute(args, ctx)
+
+    await expect(act).rejects.toThrow(`Missing size. Use one of: ${supportedSizes}.`)
+  })
+
+  test("rejects a missing prompt without calling the backend", async () => {
+    const fetchMock = mock(async () => new Response(""))
+    globalThis.fetch = fetchMock as unknown as typeof fetch
+    const hooks = await plugin.server({} as PluginInput)
+    const ctx = { directory: dir } as ToolContext
+    const args = { out: "cat.png", size: "1254x1254" } as unknown as GenerateArgs
+
+    const act = hooks.tool?.gpt_imagegen?.execute(args, ctx)
+
+    await expect(act).rejects.toThrow("at prompt")
     expect(fetchMock).not.toHaveBeenCalled()
   })
 })

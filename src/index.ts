@@ -4,7 +4,39 @@ import { loadOpenAIAuth } from "./auth"
 import { callViaCodexImages } from "./codex"
 import { readReferenceImages } from "./input-image"
 import { saveGeneratedImage } from "./output-image"
-import { IMAGE_SIZES, type ImageSize, parseImageSize, SIZE_CHOICES } from "./size"
+import { IMAGE_SIZES, type ImageSize, SIZE_CHOICES } from "./size"
+
+// https://developers.openai.com/api/docs/guides/image-generation
+const argsShape = {
+  prompt: tool.schema.string().describe("Description of the image to generate."),
+  out: tool.schema
+    .string()
+    .describe("Output file path, relative to the project directory unless absolute. The plugin writes a PNG."),
+  size: tool.schema
+    .enum(Object.keys(IMAGE_SIZES) as [ImageSize, ...ImageSize[]], {
+      error: (issue) =>
+        issue.input == null
+          ? `Missing size. Use one of: ${SIZE_CHOICES}.`
+          : `Unsupported size "${issue.input}". Use one of: ${SIZE_CHOICES}.`,
+    })
+    .describe(
+      [
+        `Output size. Only these sizes can be generated: ${SIZE_CHOICES}.`,
+        "Typical choices: 1672x941 for a 16:9 video thumbnail, 1254x1254 for a square icon, 941x1672 for a phone wallpaper.",
+      ].join(" "),
+    ),
+  // Same limit as Codex (MAX_EDIT_IMAGES).
+  // https://github.com/openai/codex/blob/a4ebc509f4cdff88a8e58e175541970a30a2d385/codex-rs/ext/image-generation/src/tool.rs#L59
+  images: tool.schema
+    .array(tool.schema.string())
+    .max(5)
+    .nullish()
+    .describe("Optional reference image paths, up to 5, relative to the project directory unless absolute."),
+}
+
+// Some OpenCode versions (e.g. 1.18.34) do not validate plugin tool arguments before calling execute,
+// so execute validates them against the same schema.
+const argsSchema = tool.schema.object(argsShape)
 
 const GptImagePlugin: Plugin = async (_input: PluginInput): Promise<Hooks> => {
   return {
@@ -24,34 +56,20 @@ const GptImagePlugin: Plugin = async (_input: PluginInput): Promise<Hooks> => {
           "If the use clearly implies a shape, such as a YouTube thumbnail or an app icon, pick the matching size without asking.",
           "The saved image can differ from the requested size by 1px, so do not promise exact pixel dimensions before generating. After generating, tell the user the size reported in the tool result.",
         ].join(" "),
-        // https://developers.openai.com/api/docs/guides/image-generation
-        args: {
-          prompt: tool.schema.string().describe("Description of the image to generate."),
-          out: tool.schema
-            .string()
-            .describe("Output file path, relative to the project directory unless absolute. The plugin writes a PNG."),
-          size: tool.schema
-            .enum(Object.keys(IMAGE_SIZES) as [ImageSize, ...ImageSize[]])
-            .describe(
-              [
-                `Output size. Only these sizes can be generated: ${SIZE_CHOICES}.`,
-                "Typical choices: 1672x941 for a 16:9 video thumbnail, 1254x1254 for a square icon, 941x1672 for a phone wallpaper.",
-              ].join(" "),
-            ),
-          images: tool.schema
-            .array(tool.schema.string())
-            .optional()
-            .describe("Optional reference image paths, relative to the project directory unless absolute."),
-        },
-        async execute(args, ctx) {
-          const size = parseImageSize(args.size)
+        args: argsShape,
+        async execute(rawArgs, ctx) {
+          const parsed = argsSchema.safeParse(rawArgs)
+          if (!parsed.success) {
+            throw new Error(tool.schema.prettifyError(parsed.error))
+          }
+          const args = parsed.data
           const auth = await loadOpenAIAuth()
           if (!auth) {
             throw new Error("OpenAI ChatGPT OAuth credentials not configured.")
           }
 
           const inputImageDataUrls = await readReferenceImages(args.images, ctx.directory)
-          const base64 = await callViaCodexImages(auth, { ...args, size }, inputImageDataUrls)
+          const base64 = await callViaCodexImages(auth, args, inputImageDataUrls)
 
           const { savedPath, versioned, message } = await saveGeneratedImage(args.out, ctx.directory, base64)
 

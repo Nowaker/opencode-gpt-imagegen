@@ -19,7 +19,7 @@
 ## Highlights
 
 - **Subscription-friendly.** Generations ride on the same Codex backend channel OpenCode already uses for ChatGPT subscription chat — billed against your ChatGPT plan, not your API credits.
-- **Reference images.** Pass any number of input images alongside the prompt for style guidance, edit targets, or compositing inputs.
+- **Reference images.** Pass up to five input images alongside the prompt for style guidance, edit targets, or compositing inputs.
 
 ## Installation
 
@@ -69,7 +69,7 @@ The previous `character.png` is left untouched; the new image lands at `characte
 
 ### Example C — feed existing image files as input
 
-Pass any number of image paths via the `images` argument and the model uses them as references for the next generation — for style guidance, characters to keep, scenes to extend, and so on.
+Pass up to five image paths via the `images` argument and the model uses them as references for the next generation — for style guidance, characters to keep, scenes to extend, and so on.
 
 > Take `character.png` and `character-v2.png` and put both characters together on the engawa of an old Japanese house, smiling at the viewer. 16:9 landscape, same 90s anime style.
 

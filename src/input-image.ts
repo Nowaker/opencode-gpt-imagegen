@@ -15,6 +15,6 @@ async function readImageAsDataUrl(filePath: string, ctxDir: string): Promise<str
 // Read the optional reference image paths and encode them as data URLs, which the
 // Codex images edits endpoint accepts as `images[].image_url`. Paths resolve relative
 // to the OpenCode context directory unless absolute.
-export async function readReferenceImages(paths: string[] | undefined, ctxDir: string): Promise<string[]> {
+export async function readReferenceImages(paths: string[] | null | undefined, ctxDir: string): Promise<string[]> {
   return Promise.all((paths ?? []).map((p) => readImageAsDataUrl(p, ctxDir)))
 }
