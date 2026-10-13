@@ -143,6 +143,19 @@ describe("gpt_imagegen execute", () => {
     await expect(act).rejects.toThrow(`Missing size. Use one of: ${supportedSizes}.`)
   })
 
+  test("rejects an unsupported background without calling the backend", async () => {
+    const fetchMock = mock(async () => new Response(""))
+    globalThis.fetch = fetchMock as unknown as typeof fetch
+    const hooks = await plugin.server({} as PluginInput)
+    const ctx = { directory: dir } as ToolContext
+    const args = { prompt: "a cat", out: "cat.png", size: "1254x1254", background: "auto" } as unknown as GenerateArgs
+
+    const act = hooks.tool?.gpt_imagegen?.execute(args, ctx)
+
+    await expect(act).rejects.toThrow("at background")
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
   test("rejects a missing prompt without calling the backend", async () => {
     const fetchMock = mock(async () => new Response(""))
     globalThis.fetch = fetchMock as unknown as typeof fetch

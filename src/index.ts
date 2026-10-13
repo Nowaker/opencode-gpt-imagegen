@@ -32,6 +32,17 @@ const argsShape = {
     .max(5)
     .nullish()
     .describe("Optional reference image paths, up to 5, relative to the project directory unless absolute."),
+  // https://github.com/openai/codex/blob/a4ebc509f4cdff88a8e58e175541970a30a2d385/codex-rs/ext/image-generation/imagegen_description.md?plain=1#L9
+  background: tool.schema
+    .enum(["opaque", "transparent"])
+    .nullish()
+    .describe(
+      [
+        "Optional background of the output image. Defaults to `opaque`.",
+        "Use `transparent` when the request calls for a transparent background, including background removal or a cutout.",
+        "When editing reference images, preserve their existing transparency unless the user asks to change it.",
+      ].join(" "),
+    ),
 }
 
 // Some OpenCode versions (e.g. 1.18.34) do not validate plugin tool arguments before calling execute,
