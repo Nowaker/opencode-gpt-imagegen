@@ -40,7 +40,7 @@ describe("gpt_imagegen execute", () => {
     const out = "cat.png"
     const size = "1672x941"
 
-    const result = await hooks.tool?.gpt_imagegen?.execute({ prompt: "a cat", out, quality: "auto", size }, ctx)
+    const result = await hooks.tool?.gpt_imagegen?.execute({ prompt: "a cat", out, size }, ctx)
 
     const savedPath = path.join(dir, out)
     expect(await readFile(savedPath)).toEqual(PNG_BUFFER)
@@ -55,6 +55,22 @@ describe("gpt_imagegen execute", () => {
     )
   })
 
+  test("ignores a quality argument from callers written for older versions", async () => {
+    const fetchMock = mock(async (_url: string, _init: RequestInit) => imagesResponse(PNG_BASE64))
+    globalThis.fetch = fetchMock as unknown as typeof fetch
+    const hooks = await plugin.server({} as PluginInput)
+    const ctx = { directory: dir } as ToolContext
+    const out = "cat.png"
+    // Versions before 1.0.0 required quality, so older prompts and skills may still pass it.
+    const args = { prompt: "a cat", out, size: "1672x941", quality: "low" } as const
+
+    await hooks.tool?.gpt_imagegen?.execute(args, ctx)
+
+    expect(await readFile(path.join(dir, out))).toEqual(PNG_BUFFER)
+    const [, init] = fetchMock.mock.calls[0]
+    expect(JSON.parse(init.body as string).quality).toBe("auto")
+  })
+
   test("rejects an unsupported size without calling the backend", async () => {
     const fetchMock = mock(async () => new Response(""))
     globalThis.fetch = fetchMock as unknown as typeof fetch
@@ -63,7 +79,7 @@ describe("gpt_imagegen execute", () => {
     // Some OpenCode versions pass arguments to execute without validating them against the schema.
     const size = "1280x720" as ImageSize
 
-    const act = hooks.tool?.gpt_imagegen?.execute({ prompt: "a cat", out: "cat.png", quality: "auto", size }, ctx)
+    const act = hooks.tool?.gpt_imagegen?.execute({ prompt: "a cat", out: "cat.png", size }, ctx)
 
     await expect(act).rejects.toThrow(`Unsupported size "${size}".`)
     expect(fetchMock).not.toHaveBeenCalled()

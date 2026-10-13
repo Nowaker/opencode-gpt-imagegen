@@ -93,7 +93,7 @@ describe("gpt_imagegen e2e (subscription)", () => {
       await runOpencode(
         `Use the gpt_imagegen tool to generate an image at character.png. ` +
           `Content: a man wearing a navy-blue samue and a red hachimaki headband, standing in a garden of cherry blossoms in full bloom. ` +
-          `Style: ${STYLE}. Size: 1024x1536 (portrait). Quality: medium.`,
+          `Style: ${STYLE}. Size: 1024x1536 (portrait).`,
       )
       const out = path.join(WORKDIR, "character.png")
       const buf = await assertPng(out)
@@ -111,7 +111,7 @@ describe("gpt_imagegen e2e (subscription)", () => {
       await runOpencode(
         `Use the gpt_imagegen tool to generate an image at character.png. ` +
           `Content: a woman wearing a yellow yukata and holding a red wagasa parasol, standing in a garden at night with fireflies dancing around her. ` +
-          `Style: ${STYLE}. Size: 1536x1024 (landscape). Quality: medium.`,
+          `Style: ${STYLE}. Size: 1536x1024 (landscape).`,
       )
       const out = path.join(WORKDIR, "character-v2.png")
       const buf = await assertPng(out)
@@ -132,7 +132,7 @@ describe("gpt_imagegen e2e (subscription)", () => {
           `Content: the man from Image 1 (navy samue + red hachimaki) and the woman from Image 2 (yellow yukata + red wagasa) standing side by side ` +
           `on the engawa veranda of an old Japanese house, smiling at the viewer. ` +
           `Preserve each character's outfit, hairstyle, and props exactly. ` +
-          `Style: ${STYLE}. Size: 1672x941. Quality: medium.`,
+          `Style: ${STYLE}. Size: 1672x941.`,
       )
       const out = path.join(WORKDIR, "together.png")
       const buf = await assertPng(out)

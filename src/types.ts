@@ -6,7 +6,6 @@ export type OpenAIAuth = { type: "oauth"; access: string; accountId?: string }
 export type GenerateArgs = {
   prompt: string
   out: string
-  quality: "low" | "medium" | "high" | "auto"
   size: ImageSize
   images?: string[]
 }
