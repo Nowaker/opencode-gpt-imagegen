@@ -84,7 +84,7 @@ function readPngColorType(buf: Buffer): number {
   return buf[25]
 }
 
-describe("gpt_imagegen e2e (subscription)", () => {
+describe("gpt_imagegen e2e", () => {
   beforeAll(async () => {
     console.log(`WORKDIR: ${WORKDIR}`)
     console.log(`XDG_CONFIG_HOME: ${XDG_CONFIG_HOME}`)

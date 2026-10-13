@@ -50,7 +50,7 @@ If you use an unversioned entry or `@latest` but do not have that directory, see
 
 Just ask your agent in natural language and `gpt_imagegen` will be picked up.
 
-The three examples below are the **actual outputs of this repo's e2e test suite** — see [`tests/e2e/subscription.test.ts`](./tests/e2e/subscription.test.ts) for the exact prompts and assertions.
+The three examples below are the **actual outputs of this repo's e2e test suite** — see [`tests/e2e/gpt_imagegen.test.ts`](./tests/e2e/gpt_imagegen.test.ts) for the exact prompts and assertions.
 
 ### Example A — generate
 
