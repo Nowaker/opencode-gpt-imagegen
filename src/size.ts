@@ -17,22 +17,6 @@ export const SIZE_CHOICES = Object.entries(IMAGE_SIZES)
   .map(([size, aspectRatio]) => `${size} (${aspectRatio})`)
   .join(", ")
 
-function isImageSize(value: string): value is ImageSize {
-  return Object.hasOwn(IMAGE_SIZES, value)
-}
-
-// The tool schema already requires `size` from IMAGE_SIZES, but some OpenCode versions (e.g. 1.18.34)
-// do not validate plugin tool arguments before calling execute, so check it here as well.
-export function parseImageSize(value: string | undefined): ImageSize {
-  if (value === undefined) {
-    throw new Error(`Missing size. Use one of: ${SIZE_CHOICES}.`)
-  }
-  if (!isImageSize(value)) {
-    throw new Error(`Unsupported size "${value}". Use one of: ${SIZE_CHOICES}.`)
-  }
-  return value
-}
-
 export function appendSizeToPrompt(prompt: string, size: ImageSize): string {
   const [width, height] = size.split("x")
   return `${prompt} Generate the image with a width of ${width} pixels and a height of ${height} pixels (${IMAGE_SIZES[size]} aspect ratio).`

@@ -7,5 +7,5 @@ export type GenerateArgs = {
   prompt: string
   out: string
   size: ImageSize
-  images?: string[]
+  images?: string[] | null
 }
