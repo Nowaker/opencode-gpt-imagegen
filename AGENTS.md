@@ -29,6 +29,9 @@ When you open a pull request, including one for the maintainer, write its descri
 - `tests/e2e/gpt_imagegen.test.ts` shells out to the `opencode` CLI in a temporary workdir. Its configuration denies all tools except `gpt_imagegen` so the agent cannot modify generated files with other tools.
 - E2E requires OpenCode to be authenticated with ChatGPT OAuth; the plugin reads `OPENCODE_AUTH_CONTENT` first, then `$XDG_DATA_HOME/opencode/auth.json`.
 - The e2e tests assert that produced files are valid PNGs, and cover the plugin's output auto-versioning and transparent backgrounds.
+- The README Usage examples show the e2e prompts and outputs. When you add, remove, or change an e2e case, update the README Usage section to match:
+  - Copy each prompt with `${STYLE}` expanded, and update the example count.
+  - Replace all images in `assets/` with the outputs of one passing run, because Example C uses the outputs of A and B as reference images. The test logs the path of each output.
 
 ## Implementation Notes
 
