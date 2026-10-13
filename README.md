@@ -81,6 +81,14 @@ Ask for a transparent background, and the agent passes `background: "transparent
 
 <p align="center"><img src="./assets/sticker.png" alt="Example D output: red paper lantern sticker with a transparent background" width="320" /></p>
 
+### Sizes
+
+`gpt_imagegen` generates only these sizes: `1254x1254` (1:1), `1536x1024` (3:2), `1024x1536` (2:3), `1448x1086` (4:3), `1086x1448` (3:4), `1672x941` (16:9), and `941x1672` (9:16).
+
+The Codex image backend does not take pixel dimensions. It always generates about 1.57 megapixels and takes only the aspect ratio from the prompt. These sizes are common aspect ratios at that pixel count, so the backend produces them as requested. The output can still differ from the requested size by 1px ([#107](https://github.com/yuji-hatakeyama/opencode-gpt-imagegen/issues/107#issuecomment-6020015062)).
+
+If you ask for an unsupported size, the tool instructs the agent to ask you which supported size to use. The agent also asks when you give no size and the request does not imply a shape. When the request implies a shape, such as a YouTube thumbnail or an app icon, the agent picks the matching size without asking. To get another exact size, resize or crop the output afterwards, for example with ImageMagick.
+
 ## How it works
 
 OpenCode already talks to the OpenAI Codex backend to power ChatGPT subscription chat. This plugin calls the image generation endpoints of that backend (`images/generations`, or `images/edits` when reference images are given), the same endpoints the Codex CLI uses, and writes the returned PNG to disk. Auth is read from OpenCode's standard `auth.json`; no new credential surface is introduced.
