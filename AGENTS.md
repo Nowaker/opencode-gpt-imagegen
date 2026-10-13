@@ -36,6 +36,7 @@ When you open a pull request, including one for the maintainer, write its descri
 ## Implementation Notes
 
 - The exposed tool is `gpt_imagegen`; it calls the ChatGPT Codex Images endpoints, `images/generations`, or `images/edits` when reference images are given.
+- The `baseURL` plugin option points those requests at a proxy serving the same endpoints instead; the proxy holds the ChatGPT credentials, so `auth.json` is not read and no credentials are sent.
 - Output paths are resolved relative to the OpenCode context directory unless absolute, and existing files are never overwritten; suffixes `-v2` through `-v999` are tried.
 - Reference images are read from paths relative to the OpenCode context directory and are embedded as data URLs after MIME detection.
 

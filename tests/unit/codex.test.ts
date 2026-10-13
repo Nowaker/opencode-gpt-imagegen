@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, mock, test } from "bun:test"
-import { callViaCodexImages } from "../../src/codex"
+import { callViaCodexImages, chatGptImagesTarget, proxyImagesTarget } from "../../src/codex"
 import type { GenerateArgs } from "../../src/types"
 
 function imagesResponse(data: Array<{ b64_json: string }>): Response {
@@ -23,7 +23,7 @@ describe("callViaCodexImages", () => {
     const auth = { type: "oauth", access: "tok", accountId: "acct" } as const
     const prompt = "a mountain lake"
 
-    const result = await callViaCodexImages(auth, generateArgs({ prompt, size: "1254x1254" }), [])
+    const result = await callViaCodexImages(chatGptImagesTarget(auth), generateArgs({ prompt, size: "1254x1254" }), [])
 
     expect(result).toBe(image)
     expect(fetchMock).toHaveBeenCalledTimes(1)
@@ -52,7 +52,7 @@ describe("callViaCodexImages", () => {
     const prompt = "put both characters together"
     const dataUrls = ["data:image/png;base64,AAA", "data:image/jpeg;base64,BBB"]
 
-    await callViaCodexImages(auth, generateArgs({ prompt, size: "1672x941" }), dataUrls)
+    await callViaCodexImages(chatGptImagesTarget(auth), generateArgs({ prompt, size: "1672x941" }), dataUrls)
 
     const [url, init] = fetchMock.mock.calls[0]
     expect(url).toBe("https://chatgpt.com/backend-api/codex/images/edits")
@@ -71,7 +71,7 @@ describe("callViaCodexImages", () => {
     globalThis.fetch = fetchMock as unknown as typeof fetch
     const auth = { type: "oauth", access: "tok" } as const
 
-    await callViaCodexImages(auth, generateArgs({ background: "transparent" }), [])
+    await callViaCodexImages(chatGptImagesTarget(auth), generateArgs({ background: "transparent" }), [])
 
     const [, init] = fetchMock.mock.calls[0]
     expect(JSON.parse(init.body as string).background).toBe("transparent")
@@ -82,7 +82,7 @@ describe("callViaCodexImages", () => {
     globalThis.fetch = fetchMock as unknown as typeof fetch
     const auth = { type: "oauth", access: "tok" } as const
 
-    await callViaCodexImages(auth, generateArgs({ background: null }), [])
+    await callViaCodexImages(chatGptImagesTarget(auth), generateArgs({ background: null }), [])
 
     const [, init] = fetchMock.mock.calls[0]
     expect(JSON.parse(init.body as string).background).toBe("opaque")
@@ -93,10 +93,26 @@ describe("callViaCodexImages", () => {
     globalThis.fetch = fetchMock as unknown as typeof fetch
     const auth = { type: "oauth", access: "tok" } as const
 
-    await callViaCodexImages(auth, generateArgs(), [])
+    await callViaCodexImages(chatGptImagesTarget(auth), generateArgs(), [])
 
     const [, init] = fetchMock.mock.calls[0]
     expect(init.headers as Record<string, string>).not.toHaveProperty("ChatGPT-Account-Id")
+  })
+
+  test("posts to the proxy's images endpoints without credentials when given a proxy target", async () => {
+    const fetchMock = mock(async (_url: string, _init: RequestInit) => imagesResponse([{ b64_json: "BASE64IMAGE" }]))
+    globalThis.fetch = fetchMock as unknown as typeof fetch
+
+    await callViaCodexImages(proxyImagesTarget("http://127.0.0.1:3457/v1"), generateArgs(), [])
+    await callViaCodexImages(proxyImagesTarget("http://127.0.0.1:3457/v1/"), generateArgs(), [
+      "data:image/png;base64,AAA",
+    ])
+
+    const [[firstUrl, firstInit], [secondUrl, secondInit]] = fetchMock.mock.calls
+    expect(firstUrl).toBe("http://127.0.0.1:3457/v1/images/generations")
+    expect(firstInit.headers).toEqual({ "Content-Type": "application/json", originator: "opencode" })
+    expect(secondUrl).toBe("http://127.0.0.1:3457/v1/images/edits")
+    expect(secondInit.headers).toEqual({ "Content-Type": "application/json", originator: "opencode" })
   })
 
   test("throws with the status and response body when the request fails", async () => {
@@ -104,7 +120,7 @@ describe("callViaCodexImages", () => {
     globalThis.fetch = fetchMock as unknown as typeof fetch
     const auth = { type: "oauth", access: "tok" } as const
 
-    const act = callViaCodexImages(auth, generateArgs(), [])
+    const act = callViaCodexImages(chatGptImagesTarget(auth), generateArgs(), [])
 
     await expect(act).rejects.toThrow("codex images request failed: 500 upstream boom")
   })
@@ -114,7 +130,7 @@ describe("callViaCodexImages", () => {
     globalThis.fetch = fetchMock as unknown as typeof fetch
     const auth = { type: "oauth", access: "tok" } as const
 
-    const act = callViaCodexImages(auth, generateArgs(), [])
+    const act = callViaCodexImages(chatGptImagesTarget(auth), generateArgs(), [])
 
     await expect(act).rejects.toThrow("no image returned by codex images endpoint")
   })
@@ -125,7 +141,7 @@ describe("callViaCodexImages", () => {
     globalThis.fetch = fetchMock as unknown as typeof fetch
     const auth = { type: "oauth", access: "tok" } as const
 
-    const act = callViaCodexImages(auth, generateArgs(), [])
+    const act = callViaCodexImages(chatGptImagesTarget(auth), generateArgs(), [])
 
     await expect(act).rejects.toThrow("no image returned by codex images endpoint")
   })

@@ -1,7 +1,7 @@
-import type { Hooks, Plugin, PluginInput, PluginModule } from "@opencode-ai/plugin"
+import type { Hooks, Plugin, PluginInput, PluginModule, PluginOptions } from "@opencode-ai/plugin"
 import { tool } from "@opencode-ai/plugin"
 import { loadOpenAIAuth } from "./auth"
-import { callViaCodexImages } from "./codex"
+import { type CodexImagesTarget, callViaCodexImages, chatGptImagesTarget, proxyImagesTarget } from "./codex"
 import { readReferenceImages } from "./input-image"
 import { saveGeneratedImage } from "./output-image"
 import { IMAGE_SIZES, type ImageSize, SIZE_CHOICES } from "./size"
@@ -49,7 +49,28 @@ const argsShape = {
 // so execute validates them against the same schema.
 const argsSchema = tool.schema.object(argsShape)
 
-const GptImagePlugin: Plugin = async (_input: PluginInput): Promise<Hooks> => {
+// Plugin options, given as `["opencode-gpt-imagegen", { ... }]` in the OpenCode config.
+// `baseURL` sends requests to a proxy serving the Codex images endpoints instead of ChatGPT itself.
+const optionsSchema = tool.schema.object({
+  baseURL: tool.schema.url({ protocol: /^https?$/ }).optional(),
+})
+
+async function resolveImagesTarget(options: PluginOptions | undefined): Promise<CodexImagesTarget> {
+  const parsed = optionsSchema.safeParse(options ?? {})
+  if (!parsed.success) {
+    throw new Error(`invalid opencode-gpt-imagegen options: ${tool.schema.prettifyError(parsed.error)}`)
+  }
+  if (parsed.data.baseURL) {
+    return proxyImagesTarget(parsed.data.baseURL)
+  }
+  const auth = await loadOpenAIAuth()
+  if (!auth) {
+    throw new Error("OpenAI ChatGPT OAuth credentials not configured.")
+  }
+  return chatGptImagesTarget(auth)
+}
+
+const GptImagePlugin: Plugin = async (_input: PluginInput, options?: PluginOptions): Promise<Hooks> => {
   return {
     tool: {
       gpt_imagegen: tool({
@@ -74,13 +95,10 @@ const GptImagePlugin: Plugin = async (_input: PluginInput): Promise<Hooks> => {
             throw new Error(tool.schema.prettifyError(parsed.error))
           }
           const args = parsed.data
-          const auth = await loadOpenAIAuth()
-          if (!auth) {
-            throw new Error("OpenAI ChatGPT OAuth credentials not configured.")
-          }
+          const target = await resolveImagesTarget(options)
 
           const inputImageDataUrls = await readReferenceImages(args.images, ctx.directory)
-          const base64 = await callViaCodexImages(auth, args, inputImageDataUrls)
+          const base64 = await callViaCodexImages(target, args, inputImageDataUrls)
 
           const { savedPath, versioned, message } = await saveGeneratedImage(args.out, ctx.directory, base64)
 
