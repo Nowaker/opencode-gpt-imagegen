@@ -8,4 +8,5 @@ export type GenerateArgs = {
   out: string
   size: ImageSize
   images?: string[] | null
+  background?: "opaque" | "transparent" | null
 }

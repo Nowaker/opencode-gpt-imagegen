@@ -10,7 +10,7 @@ const CODEX_IMAGES_EDITS_ENDPOINT = "https://chatgpt.com/backend-api/codex/image
 // Same body as Codex. The backend appears to ignore model, quality, and size, and honors only background.
 // https://github.com/openai/codex/blob/a4ebc509f4cdff88a8e58e175541970a30a2d385/codex-rs/ext/image-generation/src/tool.rs#L414-L440
 // https://github.com/yuji-hatakeyama/opencode-gpt-imagegen/issues/107#issuecomment-6020014602
-const CODEX_REQUEST_DEFAULTS = { background: "opaque", model: "gpt-image-2", quality: "auto", size: "auto" }
+const CODEX_REQUEST_DEFAULTS = { model: "gpt-image-2", quality: "auto", size: "auto" }
 
 type CodexImagesResponse = { data?: Array<{ b64_json?: string }> }
 
@@ -23,6 +23,7 @@ export async function callViaCodexImages(
   const body = {
     prompt: appendSizeToPrompt(args.prompt, args.size),
     ...CODEX_REQUEST_DEFAULTS,
+    background: args.background ?? "opaque",
     ...(isEdit ? { images: inputImageDataUrls.map((dataUrl) => ({ image_url: dataUrl })) } : {}),
   }
 

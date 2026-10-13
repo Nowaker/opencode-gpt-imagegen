@@ -20,6 +20,7 @@
 
 - **Subscription-friendly.** Generations ride on the same Codex backend channel OpenCode already uses for ChatGPT subscription chat — billed against your ChatGPT plan, not your API credits.
 - **Reference images.** Pass up to five input images alongside the prompt for style guidance, edit targets, or compositing inputs.
+- **Transparent backgrounds.** Ask for a transparent background, a cutout, or background removal, and the agent passes `background: "transparent"` to get an RGBA PNG. The cutout edges can be rough, with a faint semi-transparent halo. For a clean cutout, generate the image on a plain background and remove the background yourself.
 
 ## Installation
 

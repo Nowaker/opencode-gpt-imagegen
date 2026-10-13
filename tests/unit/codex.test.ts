@@ -66,6 +66,28 @@ describe("callViaCodexImages", () => {
     })
   })
 
+  test("sends the requested background", async () => {
+    const fetchMock = mock(async (_url: string, _init: RequestInit) => imagesResponse([{ b64_json: "BASE64IMAGE" }]))
+    globalThis.fetch = fetchMock as unknown as typeof fetch
+    const auth = { type: "oauth", access: "tok" } as const
+
+    await callViaCodexImages(auth, generateArgs({ background: "transparent" }), [])
+
+    const [, init] = fetchMock.mock.calls[0]
+    expect(JSON.parse(init.body as string).background).toBe("transparent")
+  })
+
+  test("sends an opaque background when background is null", async () => {
+    const fetchMock = mock(async (_url: string, _init: RequestInit) => imagesResponse([{ b64_json: "BASE64IMAGE" }]))
+    globalThis.fetch = fetchMock as unknown as typeof fetch
+    const auth = { type: "oauth", access: "tok" } as const
+
+    await callViaCodexImages(auth, generateArgs({ background: null }), [])
+
+    const [, init] = fetchMock.mock.calls[0]
+    expect(JSON.parse(init.body as string).background).toBe("opaque")
+  })
+
   test("omits the account header when accountId is absent", async () => {
     const fetchMock = mock(async (_url: string, _init: RequestInit) => imagesResponse([{ b64_json: "BASE64IMAGE" }]))
     globalThis.fetch = fetchMock as unknown as typeof fetch
