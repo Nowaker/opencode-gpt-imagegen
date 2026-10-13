@@ -118,6 +118,19 @@ describe("gpt_imagegen execute", () => {
     expect(url).toBe("https://chatgpt.com/backend-api/codex/images/generations")
   })
 
+  test("rejects more than five reference images without calling the backend", async () => {
+    const fetchMock = mock(async () => new Response(""))
+    globalThis.fetch = fetchMock as unknown as typeof fetch
+    const hooks = await plugin.server({} as PluginInput)
+    const ctx = { directory: dir } as ToolContext
+    const images = ["1.png", "2.png", "3.png", "4.png", "5.png", "6.png"]
+
+    const act = hooks.tool?.gpt_imagegen?.execute({ prompt: "a cat", out: "cat.png", size: "1254x1254", images }, ctx)
+
+    await expect(act).rejects.toThrow("at images")
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
   test("reports a null size as missing", async () => {
     const fetchMock = mock(async () => new Response(""))
     globalThis.fetch = fetchMock as unknown as typeof fetch

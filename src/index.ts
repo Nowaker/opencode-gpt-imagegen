@@ -25,10 +25,13 @@ const argsShape = {
         "Typical choices: 1672x941 for a 16:9 video thumbnail, 1254x1254 for a square icon, 941x1672 for a phone wallpaper.",
       ].join(" "),
     ),
+  // Same limit as Codex (MAX_EDIT_IMAGES).
+  // https://github.com/openai/codex/blob/a4ebc509f4cdff88a8e58e175541970a30a2d385/codex-rs/ext/image-generation/src/tool.rs#L59
   images: tool.schema
     .array(tool.schema.string())
+    .max(5)
     .nullish()
-    .describe("Optional reference image paths, relative to the project directory unless absolute."),
+    .describe("Optional reference image paths, up to 5, relative to the project directory unless absolute."),
 }
 
 // Some OpenCode versions (e.g. 1.18.34) do not validate plugin tool arguments before calling execute,
