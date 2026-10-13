@@ -89,7 +89,6 @@ const GptImagePlugin: Plugin = async (_input: PluginInput): Promise<Hooks> => {
             metadata: {
               out: savedPath,
               versioned,
-              billing: "subscription",
             },
           }
         },

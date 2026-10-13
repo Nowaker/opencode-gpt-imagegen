@@ -2,23 +2,20 @@
 
 > **⚠️ ChatGPT subscription users: update before October 14, 2026.** [GPT-5.5 will retire from Codex with ChatGPT sign-in](https://learn.chatgpt.com/docs/models#gpt-55-retirement). Plugin versions before `0.1.13` use GPT-5.5 and will stop generating images. Follow the [update steps](#updating-the-plugin) to install `0.1.13` or later.
 
+> **📣 OpenAI API key support is on hold.** This plugin supports only ChatGPT sign-in. If you need API key support, please share your use case in [#120](https://github.com/yuji-hatakeyama/opencode-gpt-imagegen/issues/120).
+
 <p align="center"><img src="./ogp.png" alt="opencode-gpt-imagegen × gpt-image-2" /></p>
 
-> Bring [**ChatGPT Images 2.0**](https://openai.com/index/introducing-chatgpt-images-2-0/) (`gpt-image-2`) to [OpenCode](https://opencode.ai). Use it through your **ChatGPT subscription** (no API costs!) or through the **OpenAI API** — your call.
+> Bring [**ChatGPT Images 2.0**](https://openai.com/index/introducing-chatgpt-images-2-0/) (`gpt-image-2`) to [OpenCode](https://opencode.ai). Use it through your **ChatGPT subscription** (no API costs!).
 
 [![OpenCode plugin](https://img.shields.io/badge/OpenCode-plugin-blue.svg)](https://opencode.ai/docs/plugins/)
 [![npm version](https://img.shields.io/npm/v/opencode-gpt-imagegen.svg)](https://www.npmjs.com/package/opencode-gpt-imagegen)
 [![CI](https://github.com/yuji-hatakeyama/opencode-gpt-imagegen/actions/workflows/ci.yml/badge.svg)](https://github.com/yuji-hatakeyama/opencode-gpt-imagegen/actions/workflows/ci.yml)
 [![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
-| Auth path | Status | Billing |
-|---|---|---|
-| **ChatGPT subscription** (OAuth) | **Available now in v0.1.0** | **No extra cost** — comes out of your existing Plus / Pro / Business plan |
-| **OpenAI API key** | **Coming soon in v0.2.0** | Pay-per-image against your API credits, with `generate` + `edit` support |
-
 ## Highlights
 
-- **Subscription-friendly.** Generations ride on the same Codex backend channel OpenCode already uses for ChatGPT subscription chat — billed against your ChatGPT plan, not your API credits.
+- **Subscription-friendly.** Generations ride on the same Codex backend channel OpenCode already uses for ChatGPT subscription chat — billed against your existing ChatGPT Plus, Pro, or Business plan, not your API credits.
 - **Reference images.** Pass up to five input images alongside the prompt for style guidance, edit targets, or compositing inputs.
 - **Transparent backgrounds.** Ask for a transparent background, a cutout, or background removal, and the agent passes `background: "transparent"` to get an RGBA PNG. The cutout edges can be rough, with a faint semi-transparent halo. For a clean cutout, generate the image on a plain background and remove the background yourself.
 
@@ -50,7 +47,7 @@ If you use an unversioned entry or `@latest` but do not have that directory, see
 
 Just ask your agent in natural language and `gpt_imagegen` will be picked up.
 
-The three examples below are the **actual outputs of this repo's e2e test suite** — see [`tests/e2e/subscription.test.ts`](./tests/e2e/subscription.test.ts) for the exact prompts and assertions.
+The three examples below are the **actual outputs of this repo's e2e test suite** — see [`tests/e2e/gpt_imagegen.test.ts`](./tests/e2e/gpt_imagegen.test.ts) for the exact prompts and assertions.
 
 ### Example A — generate
 
@@ -75,14 +72,6 @@ Pass up to five image paths via the `images` argument and the model uses them as
 > Take `character.png` and `character-v2.png` and put both characters together on the engawa of an old Japanese house, smiling at the viewer. 16:9 landscape, same 90s anime style.
 
 <p align="center"><img src="./assets/together.png" alt="Example C output: both characters composed onto an engawa" width="640" /></p>
-
-## Roadmap
-
-| Version | Auth path | Scope | Status |
-|---|---|---|---|
-| **v0.1.0** | ChatGPT subscription | `gpt_imagegen` with optional reference images (generation + reference-guided edits via prompting) | **Released** |
-| **v0.2.0** | OpenAI API key | Adds the API-key billing path: both `generate` (`/v1/images/generations`) and `edit` (`/v1/images/edits`) with reference images | Next |
-| **v0.3.0** | OpenAI API key | Adds **pixel-precise mask inpainting** via `/v1/images/edits` (binary PNG alpha mask) | Planned |
 
 ## How it works
 

@@ -51,7 +51,7 @@ describe("gpt_imagegen execute", () => {
     // PNG_BASE64 is a 1x1 image. The message reports the size of the saved image, not the requested size.
     expect(result).toEqual({
       output: `Generated image saved to ${savedPath}. The image is 1x1 pixels.`,
-      metadata: { out: savedPath, versioned: false, billing: "subscription" },
+      metadata: { out: savedPath, versioned: false },
     })
     const [, init] = fetchMock.mock.calls[0]
     expect(JSON.parse(init.body as string).prompt).toBe(
