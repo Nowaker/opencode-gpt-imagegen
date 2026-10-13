@@ -79,6 +79,11 @@ function readPngDimensions(buf: Buffer): { width: number; height: number } {
   return { width: buf.readUInt32BE(16), height: buf.readUInt32BE(20) }
 }
 
+// The color type sits in the IHDR chunk right after the bit depth. 6 means RGBA.
+function readPngColorType(buf: Buffer): number {
+  return buf[25]
+}
+
 describe("gpt_imagegen e2e (subscription)", () => {
   beforeAll(async () => {
     console.log(`WORKDIR: ${WORKDIR}`)
@@ -100,6 +105,8 @@ describe("gpt_imagegen e2e (subscription)", () => {
       const { width, height } = readPngDimensions(buf)
       expect(width).toBe(1024)
       expect(height).toBe(1536)
+      // Without a background request, the plugin sends opaque and the backend returns RGB (color type 2).
+      expect(readPngColorType(buf)).toBe(2)
       console.log(`A: ${out}`)
     },
     TEST_TIMEOUT_MS,
@@ -141,6 +148,22 @@ describe("gpt_imagegen e2e (subscription)", () => {
       expect(Math.abs(width - 1672)).toBeLessThanOrEqual(1)
       expect(Math.abs(height - 941)).toBeLessThanOrEqual(1)
       console.log(`C: ${out}`)
+    },
+    TEST_TIMEOUT_MS,
+  )
+
+  test(
+    "D. sticker with a transparent background",
+    async () => {
+      await runOpencode(
+        `Use the gpt_imagegen tool to generate an image at sticker.png. ` +
+          `Content: a sticker of a red paper lantern with a transparent background. ` +
+          `Style: ${STYLE}. Size: 1254x1254.`,
+      )
+      const out = path.join(WORKDIR, "sticker.png")
+      const buf = await assertPng(out)
+      expect(readPngColorType(buf)).toBe(6)
+      console.log(`D: ${out}`)
     },
     TEST_TIMEOUT_MS,
   )
