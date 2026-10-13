@@ -32,6 +32,16 @@ Add this plugin to your [OpenCode config](https://opencode.ai/docs/plugins/). Fo
 
 OpenCode auto-installs the package via Bun on next launch — no separate `npm install` step is needed. The plugin requires OpenCode to be authenticated with ChatGPT.
 
+### Sending requests through a proxy
+
+To reach the Codex images endpoints through a proxy that holds the ChatGPT credentials itself, set `baseURL` to the proxy's base URL. The plugin then appends `images/generations` or `images/edits` to it, and sends the proxy no credentials; `auth.json` is not read.
+
+```json
+{
+  "plugin": [["opencode-gpt-imagegen", { "baseURL": "http://127.0.0.1:3457/v1" }]]
+}
+```
+
 ### Updating the plugin
 
 OpenCode caches npm plugins, so restarting it may keep an older version. To update this plugin:
