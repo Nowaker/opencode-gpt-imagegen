@@ -99,20 +99,28 @@ describe("callViaCodexImages", () => {
     expect(init.headers as Record<string, string>).not.toHaveProperty("ChatGPT-Account-Id")
   })
 
-  test("posts to the proxy's images endpoints without credentials when given a proxy target", async () => {
+  test("posts to the proxy's generations endpoint without credentials when given a proxy target", async () => {
     const fetchMock = mock(async (_url: string, _init: RequestInit) => imagesResponse([{ b64_json: "BASE64IMAGE" }]))
     globalThis.fetch = fetchMock as unknown as typeof fetch
 
     await callViaCodexImages(proxyImagesTarget("http://127.0.0.1:3457/v1"), generateArgs(), [])
+
+    const [url, init] = fetchMock.mock.calls[0]
+    expect(url).toBe("http://127.0.0.1:3457/v1/images/generations")
+    expect(init.headers).toEqual({ "Content-Type": "application/json", originator: "opencode" })
+  })
+
+  test("posts to the proxy's edits endpoint when the proxy baseURL ends with a slash", async () => {
+    const fetchMock = mock(async (_url: string, _init: RequestInit) => imagesResponse([{ b64_json: "BASE64IMAGE" }]))
+    globalThis.fetch = fetchMock as unknown as typeof fetch
+
     await callViaCodexImages(proxyImagesTarget("http://127.0.0.1:3457/v1/"), generateArgs(), [
       "data:image/png;base64,AAA",
     ])
 
-    const [[firstUrl, firstInit], [secondUrl, secondInit]] = fetchMock.mock.calls
-    expect(firstUrl).toBe("http://127.0.0.1:3457/v1/images/generations")
-    expect(firstInit.headers).toEqual({ "Content-Type": "application/json", originator: "opencode" })
-    expect(secondUrl).toBe("http://127.0.0.1:3457/v1/images/edits")
-    expect(secondInit.headers).toEqual({ "Content-Type": "application/json", originator: "opencode" })
+    const [url, init] = fetchMock.mock.calls[0]
+    expect(url).toBe("http://127.0.0.1:3457/v1/images/edits")
+    expect(init.headers).toEqual({ "Content-Type": "application/json", originator: "opencode" })
   })
 
   test("throws with the status and response body when the request fails", async () => {

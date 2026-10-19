@@ -32,7 +32,7 @@ Add this plugin to your [OpenCode config](https://opencode.ai/docs/plugins/). Fo
 }
 ```
 
-OpenCode auto-installs the package via Bun on next launch — no separate `npm install` step is needed. The plugin requires OpenCode to be authenticated with ChatGPT.
+OpenCode auto-installs the package via Bun on next launch — no separate `npm install` step is needed. The plugin requires OpenCode to be authenticated with ChatGPT, unless you send requests through a proxy as described in [Sending requests through a proxy](#sending-requests-through-a-proxy).
 
 ### Sending requests through a proxy
 
