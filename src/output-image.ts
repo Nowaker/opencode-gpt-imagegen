@@ -43,6 +43,24 @@ export function buildSavedMessage(savedPath: string, requestedPath: string, size
   return `Generated image saved to ${savedPath}${versionNote}. The image is ${size.width}x${size.height} pixels.`
 }
 
+async function isDirectory(p: string): Promise<boolean> {
+  try {
+    return (await fs.stat(p)).isDirectory()
+  } catch {
+    return false
+  }
+}
+
+async function ensureDir(dir: string): Promise<void> {
+  try {
+    await fs.mkdir(dir, { recursive: true })
+  } catch (e) {
+    // NOTE: Bun on Windows before 1.4.0 throws EEXIST for an existing ReadOnly directory such as Desktop.
+    // https://github.com/oven-sh/bun/issues/34413
+    if ((e as NodeJS.ErrnoException).code !== "EEXIST" || !(await isDirectory(dir))) throw e
+  }
+}
+
 type SaveResult = { savedPath: string; versioned: boolean; message: string }
 
 // Resolve the output path (relative to ctxDir unless absolute), then write the
@@ -51,7 +69,7 @@ type SaveResult = { savedPath: string; versioned: boolean; message: string }
 // clobbered. Returns the user-facing message alongside the saved path.
 export async function saveGeneratedImage(out: string, ctxDir: string, base64: string): Promise<SaveResult> {
   const requestedPath = path.isAbsolute(out) ? out : path.resolve(ctxDir, out)
-  await fs.mkdir(path.dirname(requestedPath), { recursive: true })
+  await ensureDir(path.dirname(requestedPath))
   const savedPath = await pickNonOverwritePath(requestedPath)
   const png = Buffer.from(base64, "base64")
   await fs.writeFile(savedPath, png)
