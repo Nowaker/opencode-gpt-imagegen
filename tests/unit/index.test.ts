@@ -199,14 +199,16 @@ describe("gpt_imagegen execute", () => {
   })
 
   test("describes the proxy instead of ChatGPT OAuth when baseURL is set", async () => {
-    const proxied = await plugin.server({} as PluginInput, { baseURL: "http://127.0.0.1:3457/v1" })
-    const direct = await plugin.server({} as PluginInput)
+    const hooks = await plugin.server({} as PluginInput, { baseURL: "http://127.0.0.1:3457/v1" })
 
-    expect(proxied.tool?.gpt_imagegen?.description).toContain("the plugin's `baseURL` option")
-    expect(proxied.tool?.gpt_imagegen?.description).not.toContain("Requires OpenCode to be authenticated")
-    expect(direct.tool?.gpt_imagegen?.description).toContain(
-      "Requires OpenCode to be authenticated with ChatGPT OAuth.",
-    )
+    expect(hooks.tool?.gpt_imagegen?.description).toContain("the plugin's `baseURL` option")
+    expect(hooks.tool?.gpt_imagegen?.description).not.toContain("Requires OpenCode to be authenticated")
+  })
+
+  test("describes the ChatGPT OAuth requirement when baseURL is not set", async () => {
+    const hooks = await plugin.server({} as PluginInput)
+
+    expect(hooks.tool?.gpt_imagegen?.description).toContain("Requires OpenCode to be authenticated with ChatGPT OAuth.")
   })
 
   test.each(["http://127.0.0.1:3457/v1?x=1", "http://127.0.0.1:3457/v1#frag"])(
