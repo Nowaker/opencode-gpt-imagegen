@@ -1,5 +1,6 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test"
+import { afterEach, beforeEach, describe, expect, mock, spyOn, test } from "bun:test"
 import { existsSync } from "node:fs"
+import * as fs from "node:fs/promises"
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
@@ -13,6 +14,7 @@ beforeEach(async () => {
 })
 
 afterEach(async () => {
+  mock.restore()
   await rm(dir, { recursive: true, force: true })
 })
 
@@ -119,5 +121,21 @@ describe("saveGeneratedImage", () => {
     )
     // The original file is left untouched.
     expect(existsSync(first.savedPath)).toBe(true)
+  })
+
+  test("saves into an existing directory even when mkdir rejects it with EEXIST (#121)", async () => {
+    // Bun on Windows before 1.4.0 throws EEXIST for an existing ReadOnly directory such as Desktop.
+    const eexist = Object.assign(new Error("EEXIST: file already exists, mkdir"), { code: "EEXIST" })
+    const mkdirSpy = spyOn(fs, "mkdir").mockRejectedValueOnce(eexist)
+    const result = await saveGeneratedImage("image.png", dir, PNG_BASE64)
+    expect(mkdirSpy).toHaveBeenCalledWith(dir, expect.anything())
+    expect(result.savedPath).toBe(path.join(dir, "image.png"))
+    const written = await readFile(result.savedPath)
+    expect(written.equals(PNG_BUFFER)).toBe(true)
+  })
+
+  test("rejects with EEXIST when a file occupies the output directory path", async () => {
+    await occupy(path.join(dir, "occupied"))
+    await expect(saveGeneratedImage("occupied/image.png", dir, PNG_BASE64)).rejects.toMatchObject({ code: "EEXIST" })
   })
 })
