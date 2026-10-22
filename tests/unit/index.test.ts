@@ -168,4 +168,73 @@ describe("gpt_imagegen execute", () => {
     await expect(act).rejects.toThrow("at prompt")
     expect(fetchMock).not.toHaveBeenCalled()
   })
+
+  test("sends the request to the baseURL proxy without ChatGPT credentials when the option is set", async () => {
+    delete process.env.OPENCODE_AUTH_CONTENT
+    const fetchMock = mock(async (_url: string, _init: RequestInit) => imagesResponse(PNG_BASE64))
+    globalThis.fetch = fetchMock as unknown as typeof fetch
+    const hooks = await plugin.server({} as PluginInput, { baseURL: "http://127.0.0.1:3457/v1" })
+    const ctx = { directory: dir } as ToolContext
+
+    await hooks.tool?.gpt_imagegen?.execute({ prompt: "a cat", out: "cat.png", size: "1254x1254" }, ctx)
+
+    expect(await readFile(path.join(dir, "cat.png"))).toEqual(PNG_BUFFER)
+    const [url, init] = fetchMock.mock.calls[0]
+    expect(url).toBe("http://127.0.0.1:3457/v1/images/generations")
+    expect(init.headers).toEqual({ "Content-Type": "application/json", originator: "opencode" })
+  })
+
+  test("sends a signed-in user's ChatGPT credentials nowhere when baseURL is set", async () => {
+    process.env.OPENCODE_AUTH_CONTENT = JSON.stringify({ openai: { type: "oauth", access: "tok", accountId: "acct" } })
+    const fetchMock = mock(async (_url: string, _init: RequestInit) => imagesResponse(PNG_BASE64))
+    globalThis.fetch = fetchMock as unknown as typeof fetch
+    const hooks = await plugin.server({} as PluginInput, { baseURL: "http://127.0.0.1:3457/v1" })
+    const ctx = { directory: dir } as ToolContext
+
+    await hooks.tool?.gpt_imagegen?.execute({ prompt: "a cat", out: "cat.png", size: "1254x1254" }, ctx)
+
+    const [url, init] = fetchMock.mock.calls[0]
+    expect(url).toBe("http://127.0.0.1:3457/v1/images/generations")
+    expect(init.headers).toEqual({ "Content-Type": "application/json", originator: "opencode" })
+  })
+
+  test("describes the proxy instead of ChatGPT OAuth when baseURL is set", async () => {
+    const hooks = await plugin.server({} as PluginInput, { baseURL: "http://127.0.0.1:3457/v1" })
+
+    expect(hooks.tool?.gpt_imagegen?.description).toContain("the plugin's `baseURL` option")
+    expect(hooks.tool?.gpt_imagegen?.description).not.toContain("Requires OpenCode to be authenticated")
+  })
+
+  test("describes the ChatGPT OAuth requirement when baseURL is not set", async () => {
+    const hooks = await plugin.server({} as PluginInput)
+
+    expect(hooks.tool?.gpt_imagegen?.description).toContain("Requires OpenCode to be authenticated with ChatGPT OAuth.")
+  })
+
+  test.each(["http://127.0.0.1:3457/v1?x=1", "http://127.0.0.1:3457/v1#frag"])(
+    "rejects baseURL %s, which has a query or a fragment, without calling the backend",
+    async (baseURL) => {
+      const fetchMock = mock(async () => new Response(""))
+      globalThis.fetch = fetchMock as unknown as typeof fetch
+      const hooks = await plugin.server({} as PluginInput, { baseURL })
+      const ctx = { directory: dir } as ToolContext
+
+      const act = hooks.tool?.gpt_imagegen?.execute({ prompt: "a cat", out: "cat.png", size: "1254x1254" }, ctx)
+
+      await expect(act).rejects.toThrow("baseURL must not have a query or a fragment")
+      expect(fetchMock).not.toHaveBeenCalled()
+    },
+  )
+
+  test("rejects a baseURL that is not an http(s) URL without calling the backend", async () => {
+    const fetchMock = mock(async () => new Response(""))
+    globalThis.fetch = fetchMock as unknown as typeof fetch
+    const hooks = await plugin.server({} as PluginInput, { baseURL: "file:///etc/passwd" })
+    const ctx = { directory: dir } as ToolContext
+
+    const act = hooks.tool?.gpt_imagegen?.execute({ prompt: "a cat", out: "cat.png", size: "1254x1254" }, ctx)
+
+    await expect(act).rejects.toThrow("invalid opencode-gpt-imagegen options")
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
 })
